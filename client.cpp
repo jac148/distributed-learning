@@ -3,7 +3,7 @@
 #include <cstring>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <arpa/inet.h> // 추가
+#include <arpa/inet.h> 
 
 int main() {
     int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
@@ -14,7 +14,7 @@ int main() {
 
     sockaddr_in serverAddress{};
     serverAddress.sin_family = AF_INET;
-    inet_pton(AF_INET, "127.0.0.1", &serverAddress.sin_addr); // 수정
+    inet_pton(AF_INET, "127.0.0.1", &serverAddress.sin_addr); 
     serverAddress.sin_port = htons(5555);
 
     if (connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) {
