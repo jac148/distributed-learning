@@ -1,41 +1,97 @@
 #include <iostream>
-#include <unistd.h>
+#include <cstdlib>
 #include <cstring>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <arpa/inet.h> 
+#include <vector>
+#include <unistd.h>
+#include <arpa/inet.h>
+
+class Client {
+public:
+    const int numParameters;
+    int clientSocket;
+    int index;
+
+    Client(int clientIndex, int parameters)
+        : numParameters(parameters), clientSocket(-1), index(clientIndex) {
+        connectToServer();
+        run();
+    }
+
+    ~Client() {
+        close(clientSocket);
+    }
+
+    void sendUpdate(const std::vector<double>& update) {
+        send(clientSocket, update.data(), update.size() * sizeof(double), 0);
+    }
+
+    void run() {
+        try {
+            for (int i = 0; i < 10; ++i) {
+                // Compute local update based on local data
+                std::vector<double> localUpdate(numParameters, 0.1);
+
+                // Send request to the server to get the current model
+                std::vector<double> currentModel = getServerModel();
+
+                // Perform some local computation using the current model
+                // ...
+
+                // Send the update to the server
+                sendUpdate(localUpdate);
+
+                sleep(1);  // Simulate some processing time
+            }
+        } catch (const std::exception& e) {
+            std::cerr << "Exception in run: " << e.what() << std::endl;
+        }
+    }
+
+    std::vector<double> getServerModel() {
+        // Request the current model from the server
+        send(clientSocket, &index, sizeof(index), 0);
+
+        // Receive the current model from the server
+        std::vector<double> currentModel(numParameters, 0.0);
+        ssize_t bytesRead = recv(clientSocket, currentModel.data(), currentModel.size() * sizeof(double), 0);
+
+        if (bytesRead <= 0) {
+            perror("Error receiving model from server");
+            exit(EXIT_FAILURE);
+        }
+
+        return currentModel;
+    }
+
+private:
+
+    void connectToServer() {
+        clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+        if (clientSocket == -1) {
+            perror("Error creating client socket");
+            exit(EXIT_FAILURE);
+        }
+
+
+        struct sockaddr_in serverAddr;
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_port = htons(50000);
+        serverAddr.sin_addr.s_addr = inet_addr("192.168.200.138");
+
+        if (connect(clientSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1) {
+            perror("Error connecting to server");
+            exit(EXIT_FAILURE);
+        }
+    }
+};
 
 int main() {
-    int clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (clientSocket == -1) {
-        std::cerr << "Error creating client socket\n";
-        return -1;
+    const int numClients = 5;
+    const int numParameters = 10;
+
+    for (int i = 0; i < numClients; ++i) {
+        Client client(i, numParameters);
     }
 
-    sockaddr_in serverAddress{};
-    serverAddress.sin_family = AF_INET;
-    inet_pton(AF_INET, "127.0.0.1", &serverAddress.sin_addr); 
-    serverAddress.sin_port = htons(5555);
-
-    if (connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress)) < 0) {
-        std::cerr << "Error connecting to server\n";
-        close(clientSocket);
-        return -1;
-    }
-
-    std::cout << "Client is connected to the Parameter Server\n";
-
-    // Simulate sending data to the server (replace with your actual data)
-    const char* data = "Training data";
-    send(clientSocket, data, strlen(data), 0);
-
-    // Receive acknowledgment from the server
-    char buffer[256];
-    recv(clientSocket, buffer, sizeof(buffer), 0);
-    std::cout << "Received reply from server: " << buffer << "\n";
-
-    // Additional logic for processing server response can be added here
-
-    close(clientSocket);
     return 0;
 }
