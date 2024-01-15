@@ -1,4 +1,4 @@
-## Distributed learing environment setup (federated learning)
+## Distributed learning environment setup (federated learning)
 
 * Using socket communication protocol
 * Clients perform local computations on their datasets & contribute updates to a global model
