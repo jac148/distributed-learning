@@ -32,6 +32,7 @@ int main() {
     // Set up server address 
     struct sockaddr_in serverAddr;
     serverAddr.sin_family = AF_INET;
+    serverAddr.sin_addr.s_addr = inet_addr("192.168.200.138");  
     serverAddr.sin_port = htons(49561);  
     serverAddr.sin_addr.s_addr = INADDR_ANY;
 
@@ -71,23 +72,11 @@ int main() {
         std::vector<double> update(10, 0.0);  // Assume 10 parameters 
         recv(clientSocket, update.data(), update.size() * sizeof(double), 0);
 
-        // Store the update from the client
-        clientUpdates.push_back(update);
-
-        // Aggregate updates every 5 received updates
-        if (clientUpdates.size() >= 5) {
-            std::vector<double> aggregatedUpdate = aggregateUpdates(clientUpdates);
-            std::cout << "Aggregated Update: ";
-            for (const auto& val : aggregatedUpdate) {
-                std::cout << val << " ";
-            }
-            std::cout << std::endl;
-
-            // Clear the vector for the next batch of updates
-            clientUpdates.clear();
+        std::cout << "Received update from client: ";
+        for (const auto& val : update) {
+            std::cout << val << " ";
         }
-
-
+        std::cout << std::endl;
         close(clientSocket);
     }
 
