@@ -1,20 +1,27 @@
 #include <iostream>
-#include <cstdlib>
-#include <cstring>
 #include <vector>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <sys/socket.h>
 
 class Client {
 public:
-    const int numParameters;
-    int clientSocket;
-    int index;
+    Client(int numParameters) : numParameters(numParameters) {
+        // Initialize the socket
+        clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+        if (clientSocket == -1) {
+            throw std::runtime_error("Error creating socket");
+        }
 
-    Client(int clientIndex, int parameters)
-        : numParameters(parameters), clientSocket(-1), index(clientIndex) {
-        connectToServer();
-        run();
+        // Server address
+        serverAddr.sin_family = AF_INET;
+        serverAddr.sin_port = htons(50000);
+        serverAddr.sin_addr.s_addr = inet_addr("192.168.200.138");
+
+        // Connect to the server
+        if (connect(clientSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1) {
+            throw std::runtime_error("Error connecting to server");
+        }
     }
 
     ~Client() {
@@ -25,20 +32,26 @@ public:
         send(clientSocket, update.data(), update.size() * sizeof(double), 0);
     }
 
+    std::vector<double> getServerModel() {
+        std::vector<double> model(numParameters, 0.0);
+
+        // logic for receiving the model from the server
+        // ...
+
+        return model;
+    }
+
     void run() {
         try {
             for (int i = 0; i < 10; ++i) {
-                // Compute local update based on local data
-                std::vector<double> localUpdate(numParameters, 0.1);
-
-                // Send request to the server to get the current model
-                std::vector<double> currentModel = getServerModel();
-
-                // Perform some local computation using the current model
+                // local computation using the current model
                 // ...
 
-                // Send the update to the server
-                sendUpdate(localUpdate);
+                // Send request to server to get the current model
+                std::vector<double> currentModel = getServerModel();
+
+                // Send update to server
+                sendUpdate(currentModel);
 
                 sleep(1);  // Simulate some processing time
             }
@@ -47,50 +60,24 @@ public:
         }
     }
 
-    std::vector<double> getServerModel() {
-        // Request the current model from the server
-        send(clientSocket, &index, sizeof(index), 0);
-
-        // Receive the current model from the server
-        std::vector<double> currentModel(numParameters, 0.0);
-        ssize_t bytesRead = recv(clientSocket, currentModel.data(), currentModel.size() * sizeof(double), 0);
-
-        if (bytesRead <= 0) {
-            perror("Error receiving model from server");
-            exit(EXIT_FAILURE);
-        }
-
-        return currentModel;
-    }
-
 private:
-
-    void connectToServer() {
-        clientSocket = socket(AF_INET, SOCK_STREAM, 0);
-        if (clientSocket == -1) {
-            perror("Error creating client socket");
-            exit(EXIT_FAILURE);
-        }
-
-
-        struct sockaddr_in serverAddr;
-        serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(50000);
-        serverAddr.sin_addr.s_addr = inet_addr("192.168.200.138");
-
-        if (connect(clientSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1) {
-            perror("Error connecting to server");
-            exit(EXIT_FAILURE);
-        }
-    }
+    int numParameters;
+    int clientSocket;
+    struct sockaddr_in serverAddr;
 };
 
 int main() {
-    const int numClients = 5;
-    const int numParameters = 10;
+    try {
+        // input: Num of parameters for  machine learning model
+        int numParameters;
+        std::cout << "Enter the number of parameters for the model: ";
+        std::cin >> numParameters;
 
-    for (int i = 0; i < numClients; ++i) {
-        Client client(i, numParameters);
+        Client client(numParameters);
+
+        client.run();
+    } catch (const std::exception& e) {
+        std::cerr << "Exception in main: " << e.what() << std::endl;
     }
 
     return 0;
