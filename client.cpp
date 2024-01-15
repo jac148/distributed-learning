@@ -8,15 +8,15 @@ class Client {
 public:
     Client(int numParameters) : numParameters(numParameters) {
         // Initialize the socket
-        clientSocket = socket(AF_INET, SOCK_STREAM, 0);
+        clientSocket = socket(AF_INET, SOCK_STREAM, 0);//IPv4/TCP
         if (clientSocket == -1) {
             throw std::runtime_error("Error creating socket");
         }
 
         // Server address
         serverAddr.sin_family = AF_INET;
-        serverAddr.sin_port = htons(50000);
-        serverAddr.sin_addr.s_addr = inet_addr("192.168.200.138");
+        serverAddr.sin_port = htons(49561); //port number
+        serverAddr.sin_addr.s_addr = inet_addr("192.168.200.138"); //IP address
 
         // Connect to the server
         if (connect(clientSocket, (struct sockaddr*)&serverAddr, sizeof(serverAddr)) == -1) {
@@ -28,10 +28,12 @@ public:
         close(clientSocket);
     }
 
+    //sends an update to the server 
     void sendUpdate(const std::vector<double>& update) {
         send(clientSocket, update.data(), update.size() * sizeof(double), 0);
     }
 
+    //gets current server from server
     std::vector<double> getServerModel() {
         std::vector<double> model(numParameters, 0.0);
 
@@ -44,7 +46,7 @@ public:
     void run() {
         try {
             for (int i = 0; i < 10; ++i) {
-                // local computation using the current model
+                // local computation using current model
                 // ...
 
                 // Send request to server to get the current model
@@ -53,7 +55,6 @@ public:
                 // Send update to server
                 sendUpdate(currentModel);
 
-                sleep(1);  // Simulate some processing time
             }
         } catch (const std::exception& e) {
             std::cerr << "Exception in run: " << e.what() << std::endl;
